@@ -1,408 +1,129 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>PriceHunter 3D — Летающие цены</title>
-<style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-        font-family: 'Segoe UI', Arial, sans-serif;
-        background: radial-gradient(circle at 20% 20%, #1a1a3e, #0a0a14 60%);
-        color: #fff;
-        overflow-x: hidden;
-        min-height: 100vh;
-    }
-
-    /* ===== ФОН: ЛЕТАЮЩИЕ ТОВАРЫ ===== */
-    #scene3d {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        z-index: 0;
-        pointer-events: none;
-        perspective: 800px;
-    }
-    .fly-item {
-        position: absolute;
-        will-change: transform;
-        user-select: none;
-    }
-
-    /* ===== ШАПКА ===== */
-    header {
-        position: relative;
-        z-index: 10;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px 5%;
-        background: rgba(10,10,20,0.5);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-    .logo { font-size: 26px; font-weight: 800; letter-spacing: 0.5px; }
-    .logo span { background: linear-gradient(90deg, #4facfe, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    nav a { color: #b8b8d0; text-decoration: none; margin-left: 25px; font-size: 15px; transition: 0.3s; }
-    nav a:hover { color: #fff; }
-    .btn-tg {
-        background: linear-gradient(90deg, #2aabee, #229ed9);
-        border: none; color: #fff; padding: 10px 22px;
-        border-radius: 12px; font-size: 15px; font-weight: 600;
-        cursor: pointer; transition: 0.3s;
-    }
-    .btn-tg:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(42,171,238,0.4); }
-
-    /* ===== ГЛАВНЫЙ ЭКРАН ===== */
-    .hero {
-        position: relative;
-        z-index: 5;
-        text-align: center;
-        padding: 90px 20px 60px;
-    }
-    .hero h1 {
-        font-size: 56px;
-        font-weight: 900;
-        line-height: 1.15;
-        text-shadow: 0 10px 40px rgba(79,172,254,0.3);
-    }
-    .hero p { color: #a0a0c0; font-size: 19px; margin-top: 18px; }
-
-    .search-box {
-        max-width: 640px;
-        margin: 35px auto 0;
-        display: flex;
-        background: rgba(255,255,255,0.07);
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 18px;
-        padding: 8px;
-        backdrop-filter: blur(15px);
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        transition: 0.3s;
-    }
-    .search-box:focus-within { border-color: #4facfe; box-shadow: 0 20px 60px rgba(79,172,254,0.25); }
-    .search-box input {
-        flex: 1; background: transparent; border: none;
-        outline: none; color: #fff; font-size: 16px; padding: 0 18px;
-    }
-    .search-box input::placeholder { color: #7a7a9a; }
-    .search-box button {
-        background: linear-gradient(90deg, #4facfe, #6a5cff);
-        border: none; color: #fff; padding: 14px 30px;
-        border-radius: 12px; font-size: 16px; font-weight: 700;
-        cursor: pointer; transition: 0.3s;
-    }
-    .search-box button:hover { filter: brightness(1.15); box-shadow: 0 6px 20px rgba(79,172,254,0.5); }
-
-    .marketplaces {
-        margin-top: 25px;
-        color: #7a7a9a; font-size: 14px;
-    }
-    .marketplaces b { color: #c5c5e0; }
-
-    /* ===== СЕКЦИЯ КАРТОЧЕК ===== */
-    .section-title {
-        position: relative; z-index: 5;
-        text-align: center;
-        font-size: 30px; font-weight: 800;
-        margin: 70px 0 40px;
-    }
-    .section-title small {
-        display: block; font-size: 15px; font-weight: 400;
-        color: #8a8ab0; margin-top: 8px;
-    }
-
-    .cards-zone {
-        position: relative; z-index: 5;
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 45px;
-        padding: 0 5% 90px;
-        perspective: 1200px;
-    }
-
-    /* ===== 3D КАРТОЧКА (фишка) ===== */
-    .card3d {
-        width: 300px;
-        background: rgba(255,255,255,0.06);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 24px;
-        padding: 24px;
-        backdrop-filter: blur(12px);
-        transform-style: preserve-3d;
-        transition: transform 0.15s ease-out, box-shadow 0.3s;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-    }
-    .card3d:hover {
-        box-shadow: 0 30px 80px rgba(79,172,254,0.25);
-    }
-
-    /* Блик, следящий за курсором */
-    .glare {
-        position: absolute; top: 0; left: 0;
-        width: 100%; height: 100%;
-        border-radius: 24px;
-        pointer-events: none;
-        transition: background 0.1s;
-    }
-
-    .badge {
-        display: inline-block;
-        background: linear-gradient(90deg, #ff416c, #ff4b2b);
-        font-size: 12px; font-weight: 800;
-        padding: 5px 12px; border-radius: 20px;
-        transform: translateZ(40px);
-        box-shadow: 0 6px 18px rgba(255,65,108,0.4);
-    }
-    .prod-emoji {
-        font-size: 84px;
-        text-align: center;
-        margin: 22px 0 10px;
-        transform: translateZ(70px); /* Вылезает ИЗ карточки */
-        filter: drop-shadow(0 18px 22px rgba(0,0,0,0.55));
-    }
-    .card3d h3 {
-        font-size: 19px; text-align: center; line-height: 1.3;
-        transform: translateZ(45px);
-    }
-    .old-price {
-        text-align: center; color: #6a6a8a;
-        text-decoration: line-through;
-        margin-top: 10px; font-size: 14px;
-        transform: translateZ(30px);
-    }
-    .new-price {
-        text-align: center;
-        font-size: 32px; font-weight: 900;
-        background: linear-gradient(90deg, #43e97b, #38f9d7);
-        -webkit-background-clip: text; background-clip: text; color: transparent;
-        transform: translateZ(55px);
-        margin-bottom: 18px;
-    }
-
-    .shop-row {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 9px 14px;
-        border-radius: 12px;
-        margin-bottom: 8px;
-        font-size: 14px;
-        background: rgba(255,255,255,0.05);
-        transform: translateZ(25px);
-    }
-    .shop-row.best {
-        background: rgba(67,233,123,0.12);
-        border: 1px solid rgba(67,233,123,0.35);
-    }
-    .shop-row .price { font-weight: 700; }
-
-    .btn-track {
-        width: 100%;
-        margin-top: 14px;
-        padding: 13px;
-        border-radius: 14px;
-        border: 1px solid rgba(79,172,254,0.6);
-        background: rgba(79,172,254,0.1);
-        color: #4facfe;
-        font-size: 15px; font-weight: 700;
-        cursor: pointer;
-        transform: translateZ(35px);
-        transition: 0.3s;
-    }
-    .btn-track:hover {
-        background: #4facfe; color: #fff;
-        box-shadow: 0 8px 25px rgba(79,172,254,0.5);
-    }
-
-    footer {
-        position: relative; z-index: 5;
-        text-align: center;
-        padding: 30px;
-        color: #555577;
-        font-size: 14px;
-        border-top: 1px solid rgba(255,255,255,0.06);
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceHunter — Ваш личный помощник</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #090f21; color: white; font-family: 'Segoe UI', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease; }
+        .glass:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); }
+        .floating { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
+    </style>
 </head>
-<body>
+<body class="min-h-screen">
 
-<!-- Фон с летающими товарами -->
-<div id="scene3d"></div>
-
-<header>
-    <div class="logo">Price<span>Hunter</span> 🎯</div>
-    <nav>
-        <a href="#">Топ скидок</a>
-        <a href="#">Как это работает</a>
-        <a href="#">Для бизнеса</a>
-    </nav>
-    <button class="btn-tg">Войти через Telegram</button>
-</header>
-
-<section class="hero">
-    <h1>Охотник за ценами</h1>
-    <p>Вставь ссылку на товар — мы проверим его цену на Ozon, Wildberries, Яндекс Маркете, Мегамаркете и AliExpress</p>
-    <div class="search-box">
-        <input type="text" placeholder="Вставь ссылку или напиши: «дубленка оливка»...">
-        <button>Найти 🔍</button>
-    </div>
-    <div class="marketplaces">Работаем с: <b>Ozon</b> • <b>Wildberries</b> • <b>Яндекс Маркет</b> • <b>Мегамаркет</b> • <b>AliExpress</b></div>
-</section>
-
-<h2 class="section-title">🔥 Горящие товары прямо сейчас
-    <small>Наведи курсор на карточку — она живая</small>
-</h2>
-
-<section class="cards-zone">
-
-    <!-- Карточка 1 -->
-    <div class="card3d">
-        <div class="glare"></div>
-        <span class="badge">−74%</span>
-        <div class="prod-emoji">🧥</div>
-        <h3>Дубленка эко-мех<br>«Зеленая оливка»</h3>
-        <div class="old-price">12 195 ₽</div>
-        <div class="new-price">3 088 ₽</div>
-        <div class="shop-row best"><span>OZON 👑</span><span class="price">3 088 ₽</span></div>
-        <div class="shop-row"><span>Wildberries</span><span class="price">3 450 ₽</span></div>
-        <div class="shop-row"><span>AliExpress</span><span class="price">3 590 ₽</span></div>
-        <button class="btn-track">🔔 Следить за ценой</button>
+    <!-- Декор фона -->
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden text-6xl opacity-10">
+        <div class="absolute top-20 left-10 floating">🧥</div>
+        <div class="absolute top-40 right-20 floating" style="animation-delay: 2s;">👟</div>
+        <div class="absolute bottom-40 left-1/3 floating" style="animation-delay: 4s;">📱</div>
+        <div class="absolute bottom-20 right-1/4 floating" style="animation-delay: 1s;">⌚</div>
     </div>
 
-    <!-- Карточка 2 -->
-    <div class="card3d">
-        <div class="glare"></div>
-        <span class="badge">−52%</span>
-        <div class="prod-emoji">👟</div>
-        <h3>Кроссовки Nike<br>Air Force 1</h3>
-        <div class="old-price">14 990 ₽</div>
-        <div class="new-price">7 190 ₽</div>
-        <div class="shop-row best"><span>Wildberries 👑</span><span class="price">7 190 ₽</span></div>
-        <div class="shop-row"><span>OZON</span><span class="price">7 560 ₽</span></div>
-        <div class="shop-row"><span>Мегамаркет</span><span class="price">7 840 ₽</span></div>
-        <button class="btn-track">🔔 Следить за ценой</button>
+    <div class="relative z-10 container mx-auto px-4 py-12">
+        <header class="flex flex-col md:flex-row justify-between items-center gap-6 mb-16">
+            <h1 class="text-3xl font-black text-white">Price<span class="text-blue-500">Hunter</span> ✦</h1>
+            <div class="bg-blue-500/10 text-blue-400 px-6 py-2 rounded-2xl border border-blue-500/20 text-sm font-medium">
+                🏗️ Режим разработки: Функции подключаются постепенно
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto text-center mb-24">
+            <h2 class="text-5xl md:text-7xl font-extrabold mb-8 leading-tight">
+                Охота за <span class="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">скидками</span>
+            </h2>
+            <p class="text-gray-400 text-lg mb-12 max-w-xl mx-auto">
+                Вставьте ссылку на любой товар с маркетплейса, и мы добавим его в ваш список для будущего отслеживания цен.
+            </p>
+            
+            <div class="glass p-3 rounded-[2rem] flex flex-col md:flex-row gap-3 shadow-2xl">
+                <input id="productUrl" type="text" placeholder="Ссылка на товар (Ozon, WB, AliExpress...)" 
+                       class="flex-1 bg-transparent px-6 py-4 outline-none text-white text-lg placeholder:text-gray-600">
+                <button onclick="saveProduct()" class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-blue-600/20">
+                    Отслеживать
+                </button>
+            </div>
+            <p id="statusMsg" class="mt-4 text-sm font-medium h-5 transition-all"></p>
+        </main>
+
+        <section class="max-w-4xl mx-auto">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold flex items-center gap-3">
+                    <i class="fa-solid fa-layer-group text-blue-500"></i> Мой список
+                </h3>
+                <span id="counter" class="bg-gray-800 text-gray-400 px-3 py-1 rounded-lg text-xs">0 товаров</span>
+            </div>
+            
+            <div id="productList" class="grid gap-4">
+                <!-- Состояние когда пусто -->
+                <div id="emptyState" class="glass p-12 rounded-[2rem] text-center border-dashed border-2 border-white/10">
+                    <div class="text-4xl mb-4 opacity-20">📋</div>
+                    <p class="text-gray-500">Ваш список пока пуст. Добавьте свою первую ссылку выше!</p>
+                </div>
+            </div>
+        </section>
     </div>
 
-    <!-- Карточка 3 -->
-    <div class="card3d">
-        <div class="glare"></div>
-        <span class="badge">−38%</span>
-        <div class="prod-emoji">🎧</div>
-        <h3>Наушники AirPods<br>Pro 2</h3>
-        <div class="old-price">24 990 ₽</div>
-        <div class="new-price">15 490 ₽</div>
-        <div class="shop-row best"><span>Яндекс Маркет 👑</span><span class="price">15 490 ₽</span></div>
-        <div class="shop-row"><span>AliExpress</span><span class="price">15 890 ₽</span></div>
-        <div class="shop-row"><span>Мегамаркет</span><span class="price">16 400 ₽</span></div>
-        <button class="btn-track">🔔 Следить за ценой</button>
-    </div>
+    <script>
+        let count = 0;
 
-</section>
+        function saveProduct() {
+            const input = document.getElementById('productUrl');
+            const msg = document.getElementById('statusMsg');
+            const list = document.getElementById('productList');
+            const empty = document.getElementById('emptyState');
+            const counter = document.getElementById('counter');
 
-<footer>© 2024 PriceHunter — Все цены обновляются каждые 15 минут</footer>
+            if (!input.value.trim()) {
+                msg.style.color = "#ff4d4d";
+                msg.innerText = "Упс! Нужно вставить ссылку.";
+                return;
+            }
 
-<script>
-    /* ============ 1. ФОН: ЛЕТАЮЩИЕ ТОВАРЫ ============ */
-    const items = ['🧥','👟','📱','💻','🎧','⌚','🛍️','🧸','💄','🎮','📦','🕶️','👜','🚲'];
-    const scene = document.getElementById('scene3d');
-    const flies = [];
-    const COUNT = 26;
+            msg.style.color = "#60a5fa";
+            msg.innerText = "Запоминаю товар...";
 
-    for (let i = 0; i < COUNT; i++) {
-        const el = document.createElement('div');
-        el.className = 'fly-item';
-        el.textContent = items[Math.floor(Math.random() * items.length)];
+            setTimeout(() => {
+                if (empty) empty.remove();
 
-        const depth = 0.25 + Math.random() * 0.75;
+                const item = document.createElement('div');
+                item.className = "glass p-5 rounded-2xl flex items-center justify-between gap-4 animate-move-up";
+                item.innerHTML = `
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-xl shadow-inner flex-shrink-0">🏷️</div>
+                        <div class="truncate">
+                            <p class="text-blue-400 text-[10px] font-bold uppercase tracking-widest mb-1">Товар в очереди</p>
+                            <p class="text-gray-200 truncate text-sm italic">${input.value}</p>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+                        <p class="text-[10px] text-gray-500 uppercase tracking-tighter">Статус</p>
+                        <p class="text-[10px] text-yellow-500 font-bold">ЖДЕМ API</p>
+                    </div>
+                `;
 
-        el.dataset.x = Math.random() * 100;
-        el.dataset.y = Math.random() * 100;
-        el.dataset.depth = depth;
-        el.dataset.speed = 0.4 + Math.random() * 1.2;
-        el.dataset.phase = Math.random() * Math.PI * 2;
-
-        el.style.left = el.dataset.x + '%';
-        el.style.top  = el.dataset.y + '%';
-        el.style.fontSize = Math.round(22 + depth * 55) + 'px';
-        el.style.opacity  = (0.1 + depth * 0.35).toFixed(2);
-        if (depth < 0.45) el.style.filter = 'blur(1.5px)';
-
-        scene.appendChild(el);
-        flies.push(el);
-    }
-
-    let mx = 0, my = 0;
-    function onMove(x, y) {
-        mx = x / window.innerWidth  - 0.5;
-        my = y / window.innerHeight - 0.5;
-    }
-    document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
-    document.addEventListener('touchmove', e => onMove(e.touches[0].clientX, e.touches[0].clientY));
-
-    function animate(t) {
-        for (const el of flies) {
-            const d = +el.dataset.depth;
-            const s = +el.dataset.speed;
-            const p = +el.dataset.phase;
-
-            const floatY = Math.sin(t / 1000 * s + p) * 22 * d;
-            const floatX = Math.cos(t / 1400 * s + p) * 14 * d;
-            const rotY   = Math.sin(t / 1600 * s + p) * 28;
-            const rotX   = Math.cos(t / 1900 * s + p) * 14;
-
-            const px = -mx * 60 * d;
-            const py = -my * 60 * d;
-
-            el.style.transform =
-                `translate3d(${(floatX + px).toFixed(1)}px, ${(floatY + py).toFixed(1)}px, 0) rotateY(${rotY.toFixed(1)}deg) rotateX(${rotX.toFixed(1)}deg)`;
+                list.prepend(item);
+                count++;
+                counter.innerText = `${count} товаров`;
+                input.value = "";
+                msg.style.color = "#34d399";
+                msg.innerText = "Товар успешно добавлен в ваш список!";
+                
+                setTimeout(() => { msg.innerText = ""; }, 3000);
+            }, 600);
         }
-        requestAnimationFrame(animate);
-    }
-    requestAnimationFrame(animate);
+    </script>
 
-    /* ============ 2. 3D КАРТОЧКИ С БЛИКОМ ============ */
-    document.querySelectorAll('.card3d').forEach(card => {
-        const glare = card.querySelector('.glare');
-
-        card.addEventListener('mousemove', e => {
-            const r = card.getBoundingClientRect();
-            const x = e.clientX - r.left;
-            const y = e.clientY - r.top;
-            const rx = ((r.height / 2) - y) / (r.height / 2) * 14;
-            const ry = (x - (r.width / 2)) / (r.width / 2) * 14;
-
-            card.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale(1.05)`;
-            glare.style.background =
-                `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.22), transparent 55%)`;
-        });
-
-        card.addEventListener('mouseleave', () => {
-            card.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
-            glare.style.background = 'transparent';
-        });
-    });
-</script>
-
+    <style>
+        @keyframes move-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-move-up { animation: move-up 0.4s ease-out forwards; }
+    </style>
 </body>
 </html>
-```
-
----
-
-### Что именно я изменил:
-
-1. **Заголовок:** теперь просто **«Охотник за ценами»** — крупный, на весь экран, без второй строки. Я даже увеличил его шрифт (56px), чтобы он смотрелся солиднее.
-2. **Строка маркетплейсов:** теперь работает с пятью площадками — **Ozon • Wildberries • Яндекс Маркет • Мегамаркет • AliExpress**.
-3. **Бонусом:** в карточках товаров заменил упоминания магазинов на AliExpress и Мегамаркет (там, где уместно), чтобы вся страница выглядела единообразно с новой строкой маркетплейсов.
-
-### Как обновить:
-1. Открой `index.html` через Блокнот.
-2. Выдели всё (`Ctrl+A`) → удали → вставь новый код.
-3. Сохрани (`Ctrl+S`) → обнови страницу в браузере (`F5`).
-
-**Проверь: заголовок стал чистым, а внизу под поисковой строкой видны все пять маркетплейсов?** 
-
-Когда утвердим дизайн — следующим шагом можем сделать страницу с результатами поиска (чтобы после ввода запроса сайт показывал сравнение цен) или добавить раздел «Топ-10 скидок дня». Что выбираешь? 🚀
